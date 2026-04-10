@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>T-Rex Classic: Original Speed Edition</title>
+    <title>T-Rex Classic: Hardcore Edition</title>
     <style>
         :root {
             --bg: #f7f7f7; --text: #535353; --accent: #535353;
@@ -56,7 +56,7 @@
     
     <div id="startScreen" class="menu">
         <h1 style="margin:0;">T-REX RUNNER</h1>
-        <p>RESTORED SPEED | BALANCED SPAWN</p>
+        <p>INCREASED OBSTACLES | DUCK BIRDS</p>
         <button class="btn" onclick="game.start()">START</button>
     </div>
 
@@ -78,9 +78,9 @@ const CONFIG = {
     gravity: 0.9,
     jumpForce: -16,
     px: 4,
-    startSpeed: 11,     // Restored to original faster speed
-    maxSpeed: 26,       // Restored higher cap
-    speedInc: 0.003,    // Restored faster acceleration
+    startSpeed: 11,
+    maxSpeed: 26,
+    speedInc: 0.003,
     themeInterval: 100
 };
 
@@ -137,7 +137,9 @@ class Obstacle {
             this.y = groundY - this.h;
         } else {
             this.w = 12 * CONFIG.px; this.h = 6 * CONFIG.px;
-            this.y = groundY - (Math.random() > 0.5 ? 140 : 60);
+            // BIRD HEIGHT ADJUSTED: Middle height forces a crouch (duck) to survive
+            const heights = [groundY - 145, groundY - 75]; // High (clearable) or Mid (duck required)
+            this.y = heights[Math.floor(Math.random() * heights.length)];
         }
     }
     update() { this.x -= this.speed; this.anim += 0.15; }
@@ -173,7 +175,7 @@ const game = {
         document.body.classList.remove('neon-theme');
         document.getElementById('startScreen').classList.add('hidden');
         document.getElementById('gameOverScreen').classList.add('hidden');
-        this.nextSpawn = Date.now() + 1000;
+        this.nextSpawn = Date.now() + 600;
     },
     quit() {
         this.state = 'MENU';
@@ -193,19 +195,20 @@ const game = {
         ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, this.groundY); ctx.lineTo(canvas.width, this.groundY); ctx.stroke();
 
         if (this.state === 'PLAYING') {
-            this.score += 0.25; // Faster score accumulation
+            this.score += 0.25;
             let currentTheme = Math.floor(this.score / CONFIG.themeInterval);
             if (currentTheme !== this.lastTheme) { document.body.classList.toggle('neon-theme'); this.lastTheme = currentTheme; }
             this.speed = Math.min(CONFIG.maxSpeed, this.speed + CONFIG.speedInc);
             this.player.update(this.groundY);
 
+            // INCREASED OBSTACLE FREQUENCY
             if (Date.now() > this.nextSpawn) {
-                const isBird = this.score > 300 && Math.random() > 0.8;
+                const isBird = this.score > 200 && Math.random() > 0.7;
                 this.obstacles.push(new Obstacle(this.speed, this.groundY, isBird ? 'bird' : 'cactus'));
                 
-                // Balanced delay logic with restored speed scaling
-                const delay = (1000 + Math.random()*1500) - (this.speed * 15);
-                this.nextSpawn = Date.now() + Math.max(750, delay);
+                // Tightened spawn delay
+                const delay = (600 + Math.random()*1000) - (this.speed * 12);
+                this.nextSpawn = Date.now() + Math.max(450, delay);
             }
 
             for (let i = this.obstacles.length - 1; i >= 0; i--) {
