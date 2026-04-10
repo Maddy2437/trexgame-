@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>T-Rex: Neon Overdrive - Precision Scale</title>
+    <title>T-Rex: Neon Overdrive - Balanced Edition</title>
     <style>
         :root {
             --bg: #f0f0f0; --text: #333; --accent: #555;
@@ -59,7 +59,7 @@
     
     <div id="startScreen" class="menu">
         <h1 style="margin:0; font-size: 36px;">NEON OVERDRIVE</h1>
-        <p style="margin-top: 10px;">SIZES RECALIBRATED</p>
+        <p style="margin-top: 10px;">10% FEWER OBSTACLES</p>
         <button class="btn" onclick="game.start()">START RUN</button>
     </div>
 
@@ -74,64 +74,55 @@
 </div>
 
 <script>
-/**
- * T-REX OVERDRIVE - PRECISION SIZE EDITION
- * Corrected sprite scaling and hitbox ratios.
- */
-
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 const CONFIG = {
     gravity: 0.9,
     jumpForce: -17,
-    px: 4,           // Global Pixel Scale (4px per sprite pixel)
+    px: 4,
     startSpeed: 10.5,
     maxSpeed: 25,
     speedInc: 0.0025,
     themeInterval: 100
 };
 
-// --- SPRITE DATA ---
-// Each 1x1 in data = CONFIG.px on screen
 const DINO_SPRITE = [
-    [9,0,6,1],[9,1,1,1],[12,1,3,1],[9,2,7,1],[9,3,5,1],[9,4,7,1],[0,5,1,1],[7,5,5,1],[0,6,1,1],[6,6,8,1],[0,7,2,1],[5,7,9,1],[0,8,12,1],[1,9,10,1],[2,10,8,1],[3,11,6,1]
+    [9,0,6,1], [9,1,1,1], [12,1,3,1], [9,2,7,1], [9,3,5,1], [9,4,7,1],
+    [0,5,1,1], [7,5,5,1], [0,6,1,1], [6,6,8,1], [0,7,2,1], [5,7,9,1],
+    [0,8,12,1], [1,9,10,1], [2,10,8,1], [3,11,6,1]
+];
+
+const CACTUS_LOCAL = [
+    [3, 0, 2, 10], [2, 2, 1, 3], [5, 3, 1, 4],
+    [0, 1, 1, 1], [3, 2, 1, 1]
+];
+
+const BIRD_LOCAL = [
+    [0, 2, 10, 2], [2, 0, 6, 1], [1, 1, 8, 1],
+    [10, 2, 2, 1], [3, 4, 4, 1]
 ];
 
 class Dino {
     constructor() { this.reset(); }
     reset() {
-        this.x = 80;
-        this.y = 0;
-        this.vy = 0;
-        this.isJumping = false;
-        this.anim = 0;
-        this.width = 16 * CONFIG.px;  // 64px
-        this.height = 14 * CONFIG.px; // 56px
+        this.x = 80; this.y = 0; this.vy = 0;
+        this.isJumping = false; this.anim = 0;
+        this.width = 16 * CONFIG.px; this.height = 14 * CONFIG.px;
     }
     update(groundY) {
         let ducking = (game.keys['ArrowDown'] || game.keys['KeyS']) && !this.isJumping;
         this.vy += CONFIG.gravity * (ducking ? 4 : 1);
         this.y += this.vy;
-        
-        // Dynamic floor collision based on stance
         let h = (ducking ? 8 : 14) * CONFIG.px;
-        if (this.y > groundY - h) {
-            this.y = groundY - h;
-            this.vy = 0;
-            this.isJumping = false;
-        }
+        if (this.y > groundY - h) { this.y = groundY - h; this.vy = 0; this.isJumping = false; }
         this.anim += 0.22;
     }
     draw() {
         ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--dino');
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        
+        ctx.save(); ctx.translate(this.x, this.y);
         let ducking = (game.keys['ArrowDown'] || game.keys['KeyS']) && !this.isJumping;
-        
         if (ducking) {
-            // Flattened duck sprite
             ctx.fillRect(0, 4*CONFIG.px, 16*CONFIG.px, 4*CONFIG.px);
             ctx.fillRect(8*CONFIG.px, 0, 8*CONFIG.px, 4*CONFIG.px);
         } else {
@@ -145,37 +136,21 @@ class Dino {
     }
     getRect() {
         let duck = (game.keys['ArrowDown'] || game.keys['KeyS']) && !this.isJumping;
-        // Inner padding for fair collision
-        return { 
-            x: this.x + 8, 
-            y: this.y + (duck ? 16 : 4), 
-            w: this.width - 24, 
-            h: (duck ? 16 : this.height - 8) 
-        };
+        return { x: this.x + 8, y: this.y + (duck ? 16 : 4), w: this.width - 24, h: (duck ? 16 : this.height - 8) };
     }
 }
 
 class Obstacle {
     constructor(speed, groundY, type) {
-        this.type = type;
-        this.x = canvas.width;
-        this.speed = speed;
-        this.anim = 0;
-
+        this.type = type; this.x = canvas.width; this.speed = speed; this.anim = 0;
         if (type === 'cactus') {
             const variant = Math.random();
-            if (variant > 0.7) { // Tall/Skinny
-                this.w = 4 * CONFIG.px; this.h = 14 * CONFIG.px;
-            } else if (variant > 0.4) { // Wide/Branched
-                this.w = 8 * CONFIG.px; this.h = 10 * CONFIG.px;
-            } else { // Small
-                this.w = 5 * CONFIG.px; this.h = 8 * CONFIG.px;
-            }
+            if (variant > 0.6) { this.w = 5 * CONFIG.px; this.h = 10 * CONFIG.px; this.localData = CACTUS_LOCAL.slice(0, 3); }
+            else if (variant > 0.3) { this.w = 8 * CONFIG.px; this.h = 10 * CONFIG.px; this.localData = CACTUS_LOCAL; }
+            else { this.w = 2 * CONFIG.px; this.h = 6 * CONFIG.px; this.localData = CACTUS_LOCAL.slice(0, 1); }
             this.y = groundY - this.h;
-        } else { // Bird
-            this.w = 14 * CONFIG.px; 
-            this.h = 8 * CONFIG.px;
-            // Bird heights: Low (Jump), High (Duck)
+        } else {
+            this.w = 12 * CONFIG.px; this.h = 6 * CONFIG.px;
             this.y = groundY - (Math.random() > 0.5 ? 145 : 60);
         }
     }
@@ -183,28 +158,23 @@ class Obstacle {
     draw() {
         ctx.fillStyle = getComputedStyle(document.body).getPropertyValue(this.type === 'cactus' ? '--cactus' : '--bird');
         if (this.type === 'cactus') {
-            // Organic cactus shape logic
-            ctx.fillRect(this.x + (this.w/4), this.y, this.w/2, this.h); // Trunk
-            ctx.fillRect(this.x, this.y + (this.h*0.3), CONFIG.px, this.h*0.3); // Left Arm
-            ctx.fillRect(this.x + this.w - CONFIG.px, this.y + (this.h*0.2), CONFIG.px, this.h*0.4); // Right Arm
+            this.localData.forEach(s => ctx.fillRect(this.x + s[0]*CONFIG.px, this.y + s[1]*CONFIG.px, s[2]*CONFIG.px, s[3]*CONFIG.px));
         } else {
             const wingPos = Math.floor(this.anim) % 2 === 0 ? 0 : 6*CONFIG.px;
-            ctx.fillRect(this.x, this.y + 2*CONFIG.px, this.w, 3*CONFIG.px); // Body
-            ctx.fillRect(this.x + 4*CONFIG.px, this.y + wingPos, 6*CONFIG.px, 2*CONFIG.px); // Wing
+            BIRD_LOCAL.filter(s => s[1] === 2).forEach(s => ctx.fillRect(this.x + s[0]*CONFIG.px, this.y + s[1]*CONFIG.px, s[2]*CONFIG.px, s[3]*CONFIG.px));
+            ctx.fillRect(this.x + 4*CONFIG.px, this.y + wingPos, 6*CONFIG.px, 2*CONFIG.px); 
         }
     }
 }
 
 const game = {
-    state: 'MENU', score: 0, hiScore: localStorage.getItem('vanguard_hi_v2') || 0,
+    state: 'MENU', score: 0, hiScore: localStorage.getItem('overdrive_hi_v3') || 0,
     speed: CONFIG.startSpeed, keys: {}, groundY: 0,
     obstacles: [], bg: [], nextSpawn: 0, lastTheme: 0,
 
     init() {
         this.resize(); this.player = new Dino();
-        // Static BG elements
         for(let i=0; i<15; i++) this.bg.push({x: Math.random()*canvas.width, y: Math.random()*200, s: Math.random()*0.2+0.05, w: Math.random()*100+40});
-        
         window.onkeydown = e => { 
             this.keys[e.code]=true; 
             if(e.code==='Space'||e.code==='ArrowUp') {
@@ -234,15 +204,11 @@ const game = {
     loop() {
         ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg');
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Background Parallax
         ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--mtn');
         this.bg.forEach(b => {
             ctx.fillRect(b.x, b.y, b.w, 2);
             if(this.state === 'PLAYING') { b.x -= b.s * this.speed; if(b.x < -b.w) b.x = canvas.width; }
         });
-
-        // Floor
         ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text');
         ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, this.groundY); ctx.lineTo(canvas.width, this.groundY); ctx.stroke();
 
@@ -253,7 +219,6 @@ const game = {
             this.speed = Math.min(CONFIG.maxSpeed, this.speed + CONFIG.speedInc);
             this.player.update(this.groundY);
 
-            // Frequent Spawning Engine
             if (Date.now() > this.nextSpawn) {
                 const isBird = this.score > 250 && Math.random() > 0.7;
                 if (isBird) {
@@ -264,28 +229,26 @@ const game = {
                     for(let i=0; i<cluster; i++) {
                         let o = new Obstacle(this.speed, this.groundY, 'cactus');
                         o.x += xOff; this.obstacles.push(o);
-                        xOff += o.w + (Math.random()*40 + 15); // Tight spacing
+                        xOff += o.w + (Math.random()*40 + 15);
                     }
                 }
-                // Shortened spawn interval
-                const delay = (500 + Math.random()*800) - (this.speed * 10);
-                this.nextSpawn = Date.now() + Math.max(350, delay);
+                // Frequency reduced by 10% (slight increase in delay)
+                const delay = ((500 + Math.random()*800) - (this.speed * 10)) * 1.1;
+                this.nextSpawn = Date.now() + Math.max(400, delay);
             }
 
             for (let i = this.obstacles.length - 1; i >= 0; i--) {
                 const o = this.obstacles[i]; o.update(); o.draw();
                 const r1 = this.player.getRect();
-                // Collision check
                 if (r1.x < o.x + o.w && r1.x + r1.w > o.x && r1.y < o.y + o.h && r1.y + r1.h > o.y) {
                     this.state = 'GAMEOVER';
-                    if (this.score > this.hiScore) { this.hiScore = Math.floor(this.score); localStorage.setItem('vanguard_hi_v2', this.hiScore); }
+                    if (this.score > this.hiScore) { this.hiScore = Math.floor(this.score); localStorage.setItem('overdrive_hi_v3', this.hiScore); }
                     document.getElementById('gameOverScreen').classList.remove('hidden');
-                    document.getElementById('finalScoreDisplay').innerText = `SCORE: ${Math.floor(this.score)}`;
+                    document.getElementById('finalScoreDisplay').innerText = `TOTAL DISTANCE: ${Math.floor(this.score)}`;
                 }
                 if (o.x < -300) this.obstacles.splice(i, 1);
             }
         }
-        
         this.player.draw();
         document.getElementById('curScore').innerText = Math.floor(this.score).toString().padStart(5, '0');
         document.getElementById('hiScore').innerText = Math.floor(this.hiScore).toString().padStart(5, '0');
