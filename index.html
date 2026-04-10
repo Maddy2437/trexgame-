@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>T-Rex Classic: Hardcore Edition</title>
+    <title>T-Rex Classic: Hardcore Overdrive</title>
     <style>
         :root {
             --bg: #f7f7f7; --text: #535353; --accent: #535353;
@@ -56,7 +56,6 @@
     
     <div id="startScreen" class="menu">
         <h1 style="margin:0;">T-REX RUNNER</h1>
-        <p>INCREASED OBSTACLES | DUCK BIRDS</p>
         <button class="btn" onclick="game.start()">START</button>
     </div>
 
@@ -79,18 +78,19 @@ const CONFIG = {
     jumpForce: -16,
     px: 4,
     startSpeed: 11,
-    maxSpeed: 26,
-    speedInc: 0.003,
+    maxSpeed: 28,
+    speedInc: 0.0035,
     themeInterval: 100
 };
 
-const DINO_SPRITE = [
-    [9,0,6,1], [9,1,1,1], [12,1,3,1], [9,2,7,1], [9,3,5,1], [9,4,7,1],
-    [0,5,1,1], [7,5,5,1], [0,6,1,1], [6,6,8,1], [0,7,2,1], [5,7,9,1],
-    [0,8,12,1], [1,9,10,1], [2,10,8,1], [3,11,6,1]
-];
+const DINO_SPRITE = [[9,0,6,1], [9,1,1,1], [12,1,3,1], [9,2,7,1], [9,3,5,1], [9,4,7,1], [0,5,1,1], [7,5,5,1], [0,6,1,1], [6,6,8,1], [0,7,2,1], [5,7,9,1], [0,8,12,1], [1,9,10,1], [2,10,8,1], [3,11,6,1]];
 
-const CACTUS_SPRITE = [[3, 0, 2, 10], [2, 2, 1, 3], [5, 3, 1, 4], [0, 1, 1, 1], [3, 2, 1, 1]];
+// Multi-cactus sprite variants
+const CACTUS_TYPES = [
+    { name: 'small', data: [[3, 0, 2, 10], [2, 2, 1, 3], [5, 3, 1, 4]], w: 8, h: 10 },
+    { name: 'triple', data: [[3,0,2,10],[2,2,1,3],[5,3,1,4], [10,2,2,8],[9,4,1,2],[12,5,1,3], [17,1,2,9],[16,3,1,3],[19,4,1,3]], w: 22, h: 10 },
+    { name: 'giant', data: [[4,0,4,14], [2,3,2,6], [8,4,2,7], [5,2,2,1]], w: 12, h: 14 }
+];
 
 class Dino {
     constructor() { this.reset(); }
@@ -105,7 +105,7 @@ class Dino {
         this.y += this.vy;
         let h = (ducking ? 8 : 14) * CONFIG.px;
         if (this.y > groundY - h) { this.y = groundY - h; this.vy = 0; this.isJumping = false; }
-        this.anim += 0.2;
+        this.anim += 0.25;
     }
     draw() {
         ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--dino');
@@ -125,7 +125,7 @@ class Dino {
     }
     getRect() {
         let duck = (game.keys['ArrowDown'] || game.keys['KeyS']) && !this.isJumping;
-        return { x: this.x + 10, y: this.y + (duck ? 18 : 6), w: this.width - 20, h: (duck ? 14 : this.height - 12) };
+        return { x: this.x + 8, y: this.y + (duck ? 18 : 6), w: this.width - 16, h: (duck ? 14 : this.height - 10) };
     }
 }
 
@@ -133,20 +133,21 @@ class Obstacle {
     constructor(speed, groundY, type) {
         this.type = type; this.x = canvas.width; this.speed = speed; this.anim = 0;
         if (type === 'cactus') {
-            this.w = 8 * CONFIG.px; this.h = 10 * CONFIG.px;
+            this.variant = CACTUS_TYPES[Math.floor(Math.random() * CACTUS_TYPES.length)];
+            this.w = this.variant.w * CONFIG.px; 
+            this.h = this.variant.h * CONFIG.px;
             this.y = groundY - this.h;
         } else {
             this.w = 12 * CONFIG.px; this.h = 6 * CONFIG.px;
-            // BIRD HEIGHT ADJUSTED: Middle height forces a crouch (duck) to survive
-            const heights = [groundY - 145, groundY - 75]; // High (clearable) or Mid (duck required)
-            this.y = heights[Math.floor(Math.random() * heights.length)];
+            // BIRD HEIGHT LOWERED: positioned specifically so a jump hits it, but a duck clears it
+            this.y = groundY - 62; 
         }
     }
-    update() { this.x -= this.speed; this.anim += 0.15; }
+    update() { this.x -= this.speed; this.anim += 0.2; }
     draw() {
         ctx.fillStyle = getComputedStyle(document.body).getPropertyValue(this.type === 'cactus' ? '--cactus' : '--bird');
         if (this.type === 'cactus') {
-            CACTUS_SPRITE.forEach(s => ctx.fillRect(this.x + s[0]*CONFIG.px, this.y + s[1]*CONFIG.px, s[2]*CONFIG.px, s[3]*CONFIG.px));
+            this.variant.data.forEach(s => ctx.fillRect(this.x + s[0]*CONFIG.px, this.y + s[1]*CONFIG.px, s[2]*CONFIG.px, s[3]*CONFIG.px));
         } else {
             const flap = Math.floor(this.anim) % 2 === 0 ? 0 : 5*CONFIG.px;
             ctx.fillRect(this.x, this.y + 2*CONFIG.px, this.w, 3*CONFIG.px);
@@ -175,7 +176,7 @@ const game = {
         document.body.classList.remove('neon-theme');
         document.getElementById('startScreen').classList.add('hidden');
         document.getElementById('gameOverScreen').classList.add('hidden');
-        this.nextSpawn = Date.now() + 600;
+        this.nextSpawn = Date.now() + 400;
     },
     quit() {
         this.state = 'MENU';
@@ -201,14 +202,12 @@ const game = {
             this.speed = Math.min(CONFIG.maxSpeed, this.speed + CONFIG.speedInc);
             this.player.update(this.groundY);
 
-            // INCREASED OBSTACLE FREQUENCY
+            // FREQUENCY MASSIVELY INCREASED
             if (Date.now() > this.nextSpawn) {
-                const isBird = this.score > 200 && Math.random() > 0.7;
+                const isBird = this.score > 150 && Math.random() > 0.75;
                 this.obstacles.push(new Obstacle(this.speed, this.groundY, isBird ? 'bird' : 'cactus'));
-                
-                // Tightened spawn delay
-                const delay = (600 + Math.random()*1000) - (this.speed * 12);
-                this.nextSpawn = Date.now() + Math.max(450, delay);
+                const delay = (400 + Math.random()*800) - (this.speed * 10);
+                this.nextSpawn = Date.now() + Math.max(350, delay);
             }
 
             for (let i = this.obstacles.length - 1; i >= 0; i--) {
